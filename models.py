@@ -20,12 +20,12 @@ conn = sqlite3.connect('models.db')
 # Create a cursor object
 c = conn.cursor()
 
-# Create table
-c.execute('''CREATE TABLE models
+# Create table if it doesn't exist
+c.execute('''CREATE TABLE IF NOT EXISTS models
              (_id text, id text, likes integer, private boolean, downloads integer, tags text, createdAt text, modelId text)''')
 
 num = 0
-# Insert each model line by line into the database
+# Insert or update each model line by line into the database
 for model in data:
     # Prepare the data for insertion
     _id = model.get('_id')
@@ -37,9 +37,18 @@ for model in data:
     createdAt = model.get('createdAt')
     modelId = model.get('modelId')
 
-    # Insert the data into the database
-    c.execute("INSERT INTO models VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (_id, id, likes, private, downloads, tags, createdAt, modelId))
-    num = num + 1
+    # Check if the model already exists in the database
+    c.execute("SELECT * FROM models WHERE _id = ?", (_id,))
+    result = c.fetchone()
+
+    if result:
+        # If the model exists, update the existing record
+        c.execute("UPDATE models SET id = ?, likes = ?, private = ?, downloads = ?, tags = ?, createdAt = ?, modelId = ? WHERE _id = ?",
+                  (id, likes, private, downloads, tags, createdAt, modelId, _id))
+    else:
+        # If the model does not exist, insert a new record
+        c.execute("INSERT INTO models VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (_id, id, likes, private, downloads, tags, createdAt, modelId))
+        num = num + 1
 
 # Save (commit) the changes
 conn.commit()
